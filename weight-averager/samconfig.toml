@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "weight-averager"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-qmnfaqrcvbtd"
+s3_prefix = "weight-averager"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+image_repositories = ["pytorchEndpoint=908025146523.dkr.ecr.us-east-1.amazonaws.com/weightaveragere88be7b1/pytorchendpointa8d9554arepo"]
