@@ -1,5 +1,5 @@
-# Serverless Federated Learning
-A serverless federated learning framework for AWS. Master's project for Tobias Park. 
+# Serverless-Federated-Learning
+Master's Project to use federated learning to train machine learning models over edge devices and develop a federated learning framework using the serverless computing model on AWS Lambda/Greengrass.
 
 # What does this do?
 TODO
@@ -19,4 +19,5 @@ root
 │   |   │   file
 |   |
 ```
+
 
