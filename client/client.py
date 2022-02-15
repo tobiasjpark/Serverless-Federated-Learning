@@ -61,7 +61,7 @@ class Client:
                 print("Downloading current model version from server")
                 self.service_client.download_file('global-server-model', str(version-1), self.CLIENT_ID + 'tmp_model.nn')
                 timestamps["T2"] = time()
-                timestamps["T3"] = timestamps["T2"] - timestamps["T1"] 
+                timestamps["T3 Download Time"] = timestamps["T2"] - timestamps["T1"] 
                 net_file = open(self.CLIENT_ID + 'tmp_model.nn', 'rb')
                 net_dict = pickle.load(net_file)
                 my_net = Net() 
@@ -77,7 +77,7 @@ class Client:
                 my_net = train(my_net, self.client_data) 
 
                 timestamps["T4"] = time()
-                timestamps["T5"] = timestamps["T4"] - timestamps["T3"] 
+                timestamps["T5 Compute Time"] = timestamps["T4"] - timestamps["T2"] 
 
                 print("Training finished, uploading new model to server")
 

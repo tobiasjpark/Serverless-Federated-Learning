@@ -178,6 +178,7 @@ def lambda_handler(event, context):
 
     unlock()
     timestamps["T8"] = time.time()
+    timestamps["T9 Lambda Runtime"] = timestamps["T8"] - timestamps["T7"]
     dyn_table = boto3.client('dynamodb')
     for timestamp in timestamps:
         dyn_table.update_item(TableName='timestamps', Key={'device_id': {'S': "AVERAGER"}}, AttributeUpdates={timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
