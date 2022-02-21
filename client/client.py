@@ -10,7 +10,8 @@ from LoadData import loadData
 from SleepTilNextRound import sleepTilNextRound
 from CreatePickle import createPickle
 import sys
-from time import time
+from time import time, mktime
+from datetime import timezone
 
 class Client:
     def __init__(self, id):
@@ -84,13 +85,21 @@ class Client:
                 # Upload to server
                 my_net_dict = createPickle(my_net, self.client_data)
                 pickle.dump(my_net_dict, open(self.CLIENT_ID + 'tmp_net.nn', 'wb'))
-                self.service_client.upload_file(self.CLIENT_ID + 'tmp_net.nn', 'client-weights', str(str(version) + "-" + str(self.CLIENT_ID)))
+                upload_filename = str(str(version) + "-" + str(self.CLIENT_ID))
+                self.service_client.upload_file(self.CLIENT_ID + 'tmp_net.nn', 'client-weights', upload_filename)
 
                 version_file = open(self.CLIENT_ID + 'version.txt', 'w')
                 version_file.write(str(version))
                 version_file.close()
                 completed_round = True
                 print("Done")
+
+                # get S3 upload timestamp
+                response = self.service_client.head_object(Bucket="client-weights", Key=upload_filename)
+                t = response["LastModified"]
+                t = t.replace(tzinfo=timezone.utc).astimezone(tz=None) # convert from UTC to local time so the timestamps match up for the Upload Time calculation
+                timestamps["T6"] = mktime(t.timetuple()) + t.microsecond / 1E6
+                timestamps["Upload Time"] = timestamps["T6"] - timestamps["T4"]
 
                 dyn_table = boto3.client('dynamodb')
                 for timestamp in timestamps:

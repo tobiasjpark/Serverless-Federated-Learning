@@ -1,8 +1,8 @@
 import json
 import boto3
 import pickle
-import json 
 import time
+import traceback
 from Net import Net
 from AverageModels import AVERAGING_ALGO, customAveragingAlgo 
 from CheckThreshold import checkThreshold
@@ -127,63 +127,85 @@ def lambda_handler(event, context):
                 }
             ),
         }
-
-    # Each client performs update step and uploads results to server
-    # Collect all of the model files from the clients, unpickle them, and turn them back into NNs with load_state_dict 
-
-    # Get version number of current model stored
-    storage_bucket = boto3.resource('s3').Bucket("global-server-model") # bucket where server stores its global model
-    contents = storage_bucket.objects.all() 
     version = -1
-    for name in contents:
-        filename = name.key
-        version = int(filename) + 1 # new version we are trying to make
-    print("New server version: " + str(version))
+    try:
+        # Each client performs update step and uploads results to server
+        # Collect all of the model files from the clients, unpickle them, and turn them back into NNs with load_state_dict 
 
-    client_nets_results = []
-    dest_bucket = boto3.resource('s3').Bucket("client-weights") 
-    contents = dest_bucket.objects.all() 
-    for name in contents:
-        filename = name.key
-        if int(filename.split('-')[0]) != version:
-            print("Old version detected, discarding")
-            continue # old update for an old round, ignore
-        service_client.download_file('client-weights', filename, '/tmp/tmp_model.nn')
-        net_file = open('/tmp/tmp_model.nn', 'rb')
-        net_dict = pickle.load(net_file)
-        client_nets_results.append(net_dict) 
+        # Get version number of current model stored
+        storage_bucket = boto3.resource('s3').Bucket("global-server-model") # bucket where server stores its global model
+        contents = storage_bucket.objects.all() 
+        
+        for name in contents:
+            filename = name.key
+            version = int(filename) + 1 # new version we are trying to make
+        print("New server version: " + str(version))
 
-    # Server update step
-    global_net = averageModels(client_nets_results)
+        client_nets_results = []
+        dest_bucket = boto3.resource('s3').Bucket("client-weights") 
+        contents = dest_bucket.objects.all() 
+        for name in contents:
+            filename = name.key
+            if int(filename.split('-')[0]) != version:
+                print("Old version detected, discarding")
+                continue # old update for an old round, ignore
+            service_client.download_file('client-weights', filename, '/tmp/tmp_model.nn')
+            net_file = open('/tmp/tmp_model.nn', 'rb')
+            net_dict = pickle.load(net_file)
+            client_nets_results.append(net_dict) 
 
-    # calculate when the round started
-    length = time.time()
+        # Server update step
+        global_net = averageModels(client_nets_results)
 
-    # save new model in storage bucket, clear other buckets
-    src_bucket = boto3.resource('s3').Bucket("client-assignments")
-    resource = boto3.resource('s3')
-    for x in src_bucket.objects.all():
-        resource.Object('client-assignments', x.key).delete()
-    for x in dest_bucket.objects.all():
-        resource.Object('client-weights', x.key).delete()
-    for x in storage_bucket.objects.all():
-        resource.Object('global-server-model', x.key).delete()
+        # calculate when the round started
+        length = time.time()
 
-    my_net_dict = global_net.state_dict()
-    pickle.dump(my_net_dict, open('/tmp/tmp_net.nn', 'wb'))
-    service_client.upload_file('/tmp/tmp_net.nn', 'global-server-model', str(version))
+        # save new model in storage bucket, clear other buckets
+        src_bucket = boto3.resource('s3').Bucket("client-assignments")
+        resource = boto3.resource('s3')
+        for x in src_bucket.objects.all():
+            resource.Object('client-assignments', x.key).delete()
+        for x in dest_bucket.objects.all():
+            resource.Object('client-weights', x.key).delete()
+        for x in storage_bucket.objects.all():
+            resource.Object('global-server-model', x.key).delete()
 
-    # update initiator timer
-    updateInitiatorTimer(time.time() - length)
+        my_net_dict = global_net.state_dict()
+        pickle.dump(my_net_dict, open('/tmp/tmp_net.nn', 'wb'))
+        service_client.upload_file('/tmp/tmp_net.nn', 'global-server-model', str(version))
 
+        # update initiator timer
+        updateInitiatorTimer(time.time() - length)
+
+    except Exception:
+        print(str(traceback.format_exc()))
+        unlock()
+        return {
+            "statusCode": 500,
+            "body": json.dumps(
+                {
+                    "message": "Error: " + str(traceback.format_exc()),
+                }
+            ),
+        }
+    
     unlock()
     timestamps["T8"] = time.time()
     timestamps["T9 Lambda Runtime"] = timestamps["T8"] - timestamps["T7"]
+
+    # get timestamp of upload to global server model 
+    response = service_client.head_object(Bucket="global-server-model", Key=str(version))
+    t = response["LastModified"]
+    timestamps["T11"] = time.mktime(t.timetuple()) + t.microsecond / 1E6
+
+    # download timestamp T0 from initiator from the dynamodb table
     dyn_table = boto3.client('dynamodb')
+    response = dyn_table.get_item(TableName='timestamps', Key={'device_id':{'S':'INITIATOR'}})
+    t0 = float(response['Item']['T0']['S'])
+    timestamps["T12 Total Round Time"] = timestamps["T11"] - t0
+
     for timestamp in timestamps:
         dyn_table.update_item(TableName='timestamps', Key={'device_id': {'S': "AVERAGER"}}, AttributeUpdates={timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
-
-    
 
     return {
         "statusCode": 200,
