@@ -8,12 +8,13 @@ from Train import train
 from LoadData import loadData
 from SleepTilNextRound import sleepTilNextRound
 from CreatePickle import createPickle
-import sys
+import sys, os
 from time import time, mktime
 from datetime import timezone
 
 class Client:
     def __init__(self, id):
+        os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
         self.CLIENT_ID = id
         self.service_client = boto3.client('s3')
 
