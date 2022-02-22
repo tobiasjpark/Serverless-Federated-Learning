@@ -54,6 +54,7 @@ class Client:
 
                 if current_version >= version:
                     print("Already processed this version")
+                    sleepTilNextRound(completed_round)
                     continue # no update, we already processed this
 
                 timestamps = {}
