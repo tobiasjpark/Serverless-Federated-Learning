@@ -2,7 +2,6 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 import boto3
-from boto.s3.connection import S3Connection, Bucket
 import pickle
 from Net import Net
 from Train import train
@@ -17,11 +16,6 @@ class Client:
     def __init__(self, id):
         self.CLIENT_ID = id
         self.service_client = boto3.client('s3')
-
-        conn = S3Connection()
-        self.src_bucket = Bucket(conn, "global-server-model") # bucket where clients pull model from
-        self.assignment_bucket = Bucket(conn, "client-assignments") # bucket where clients pull work assignments from
-        self.dest_bucket = Bucket(conn, "client-weight") # bucket where clients upload their models/weights to
 
         dynamodb = boto3.resource('dynamodb')
         table = dynamodb.Table('clients')
