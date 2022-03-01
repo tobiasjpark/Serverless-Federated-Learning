@@ -22,7 +22,7 @@ class Client:
         table = dynamodb.Table('clients')
         table.put_item(Item={'device_id': id})
 
-        self.client_data = loadData()
+        self.client_data = loadData(str(id))
 
         # Check every 30 seconds for new model from server with higher version number than what we have (if we have anything)
         # Wait until new model is found

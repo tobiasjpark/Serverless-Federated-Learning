@@ -1,8 +1,8 @@
 #!/bin/bash
 
-for cmd in "$@"; do {
-  echo "Process \"$cmd\" started";
-  $cmd & pid=$!
+for num in $(seq $1 $2); do {
+  echo "Process \"$num\" started";
+  python3 client.py $num & pid=$!
   PID_LIST+=" $pid";
 } done
 
