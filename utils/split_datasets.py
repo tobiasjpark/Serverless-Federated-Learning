@@ -18,9 +18,9 @@ data_per = int(len(trainset)/NUM_CLIENTS)
 for i in range(NUM_CLIENTS):
     subset = None 
     if i % 2 == 0:
-        subset = torch.utils.data.Subset(trainset, indices[data_per*i:int(data_per*(i+1)*.9)])
+        subset = torch.utils.data.Subset(trainset, indices[data_per*i:data_per*(i+1)-150])
     else:
-        subset = torch.utils.data.Subset(trainset, indices[int(data_per*i*.9):data_per*(i+1)])
+        subset = torch.utils.data.Subset(trainset, indices[data_per*i-150:data_per*(i+1)])
     file = open('split_dataset_' + str(i) + '.pkl', 'wb')
     pickle.dump(subset, file)
     file.close()
