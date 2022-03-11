@@ -1,6 +1,6 @@
 lr = 0.0001
 momentum=0.9
-ROUNDS_IN_EPOCH = 16
+ROUNDS_IN_EPOCH = 32
 
 
 import torch.nn as nn
