@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pickle
 import boto3
+import sys
 
 # Neural network model
 class Net(nn.Module):
@@ -58,7 +59,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
 # Initialize server's Neural Network 
 print("Downloading current model version from server")
 service_client = boto3.client('s3')
-service_client.download_file('global-server-model', '32', 'tmp_model.nn')
+service_client.download_file('global-server-model', sys.argv[1], 'tmp_model.nn')
 net_file = open('tmp_model.nn', 'rb')
 net_dict = pickle.load(net_file)
 my_net = Net() 
