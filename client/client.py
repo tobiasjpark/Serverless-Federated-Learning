@@ -13,7 +13,7 @@ from time import time, mktime
 from datetime import timezone
 
 class Client:
-    def __init__(self, id):
+    def __init__(self, id, epoch):
         os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
         self.CLIENT_ID = id
         self.service_client = boto3.client('s3')
@@ -71,7 +71,7 @@ class Client:
                 
                 print("Training locally...")
                 # Perform update step locally
-                my_net = train(my_net, self.client_data) 
+                my_net = train(my_net, self.client_data, epoch) 
 
                 timestamps["T4"] = time()
                 timestamps["T5 Compute Time"] = timestamps["T4"] - timestamps["T2"] 
@@ -99,7 +99,7 @@ class Client:
 
                 dyn_table = boto3.client('dynamodb')
                 for timestamp in timestamps:
-                    dyn_table.update_item(TableName='timestamps', Key={'device_id': {'S': self.CLIENT_ID}}, AttributeUpdates={timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
+                    dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(version)}}, AttributeUpdates={self.CLIENT_ID + '-' + timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
 
             except:
                 pass
@@ -108,4 +108,5 @@ class Client:
 
 if __name__ == '__main__':
     id = sys.argv[1]
-    Client(id)
+    epoch = sys.argv[2]
+    Client(id, int(epoch))

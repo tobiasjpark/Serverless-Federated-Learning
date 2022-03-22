@@ -8,8 +8,8 @@ import torch
 import torch.optim as optim
 
 # Function for training for one epoch on a client
-def train(net, trainloader):
-    for rounds in range(0, ROUNDS_IN_EPOCH):
+def train(net, trainloader, epoch):
+    for rounds in range(0, epoch):
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum)
         running_loss = 0.0

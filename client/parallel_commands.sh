@@ -2,7 +2,7 @@
 
 for num in $(seq $1 $2); do {
   echo "Process \"$num\" started";
-  python3 client.py $num & pid=$!
+  python3 client.py $num $3 & pid=$!
   PID_LIST+=" $pid";
 } done
 

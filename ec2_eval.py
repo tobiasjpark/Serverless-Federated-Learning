@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import pickle
 import boto3
 import sys
+from time import sleep 
 
 # Neural network model
 class Net(nn.Module):
@@ -57,14 +58,34 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                          shuffle=False, num_workers=2)
 
 # Initialize server's Neural Network 
-print("Downloading current model version from server")
-service_client = boto3.client('s3')
-service_client.download_file('global-server-model', sys.argv[1], 'tmp_model.nn')
-net_file = open('tmp_model.nn', 'rb')
-net_dict = pickle.load(net_file)
-my_net = Net() 
-my_net.load_state_dict(net_dict)
-criterion = nn.CrossEntropyLoss()
+version = -1
+last_version = -1
+storage_bucket = boto3.resource('s3').Bucket("global-server-model") # bucket where server stores its global model
+while True:
+    contents = storage_bucket.objects.all() 
 
-test(my_net, testloader, criterion)
+    skip = True 
+
+    for name in contents:
+        filename = name.key
+        version = int(filename)
+        skip = False 
+
+    if skip:
+        continue
+
+    if version > last_version:
+        last_version = version
+        print(version)
+        service_client = boto3.client('s3')
+        service_client.download_file('global-server-model', str(version), 'tmp_model.nn')
+        net_file = open('tmp_model.nn', 'rb')
+        net_dict = pickle.load(net_file)
+        my_net = Net() 
+        my_net.load_state_dict(net_dict)
+        criterion = nn.CrossEntropyLoss()
+
+        test(my_net, testloader, criterion)
+
+    sleep(1)
 

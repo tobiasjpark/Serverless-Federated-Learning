@@ -200,12 +200,12 @@ def lambda_handler(event, context):
 
     # download timestamp T0 from initiator from the dynamodb table
     dyn_table = boto3.client('dynamodb')
-    response = dyn_table.get_item(TableName='timestamps', Key={'device_id':{'S':'INITIATOR'}})
-    t0 = float(response['Item']['T0']['S'])
+    response = dyn_table.get_item(TableName='timestamps', Key={'Version':{'N':str(version)}})
+    t0 = float(response['Item']['INITIATOR-T0']['N'])
     timestamps["T12 Total Round Time"] = timestamps["T11"] - t0
 
     for timestamp in timestamps:
-        dyn_table.update_item(TableName='timestamps', Key={'device_id': {'S': "AVERAGER"}}, AttributeUpdates={timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
+        dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(version)}}, AttributeUpdates={'AVERAGER-' + timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
 
     return {
         "statusCode": 200,

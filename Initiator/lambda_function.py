@@ -28,7 +28,6 @@ def lambda_handler(event, context):
         }
 
     dyn_table = boto3.client('dynamodb')
-    dyn_table.update_item(TableName='timestamps', Key={'device_id': {'S': 'INITIATOR'}}, AttributeUpdates={'T0': {'Value': {'N': str(time())}}})
 
     # Query the dynamodb database and (for now) just get all of the ids
     # store ids in a json list
@@ -37,6 +36,8 @@ def lambda_handler(event, context):
     service_client = boto3.client('s3')
     storage_bucket = boto3.resource('s3').Bucket("global-server-model") # bucket where server stores its global model
     version = list(storage_bucket.objects.all())[0].key
+
+    dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(int(version)+1)}}, AttributeUpdates={'INITIATOR-T0': {'Value': {'N': str(time())}}})
 
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('clients')
@@ -60,3 +61,4 @@ def lambda_handler(event, context):
         'body': json.dumps('Success')
     }
 
+lambda_handler(0, 0)
