@@ -62,30 +62,33 @@ version = -1
 last_version = -1
 storage_bucket = boto3.resource('s3').Bucket("global-server-model") # bucket where server stores its global model
 while True:
-    contents = storage_bucket.objects.all() 
+    try:
+        contents = storage_bucket.objects.all() 
 
-    skip = True 
+        skip = True 
 
-    for name in contents:
-        filename = name.key
-        version = int(filename)
-        skip = False 
+        for name in contents:
+            filename = name.key
+            version = int(filename)
+            skip = False 
 
-    if skip:
-        continue
+        if skip:
+            continue
 
-    if version > last_version:
-        last_version = version
-        print(version)
-        service_client = boto3.client('s3')
-        service_client.download_file('global-server-model', str(version), 'tmp_model.nn')
-        net_file = open('tmp_model.nn', 'rb')
-        net_dict = pickle.load(net_file)
-        my_net = Net() 
-        my_net.load_state_dict(net_dict)
-        criterion = nn.CrossEntropyLoss()
+        if version > last_version:
+            last_version = version
+            print(version)
+            service_client = boto3.client('s3')
+            service_client.download_file('global-server-model', str(version), 'tmp_model.nn')
+            net_file = open('tmp_model.nn', 'rb')
+            net_dict = pickle.load(net_file)
+            my_net = Net() 
+            my_net.load_state_dict(net_dict)
+            criterion = nn.CrossEntropyLoss()
 
-        test(my_net, testloader, criterion)
+            test(my_net, testloader, criterion)
+    except:
+        pass
 
     sleep(1)
 
