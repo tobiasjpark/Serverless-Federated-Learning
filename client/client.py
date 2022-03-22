@@ -105,6 +105,8 @@ class Client:
 
             dyn_table = boto3.client('dynamodb')
             for timestamp in timestamps:
+                if timestamp in ("T1", "T2", "T4", "T6"):
+                    continue
                 dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(version)}}, AttributeUpdates={self.CLIENT_ID + '-' + timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
 
             
