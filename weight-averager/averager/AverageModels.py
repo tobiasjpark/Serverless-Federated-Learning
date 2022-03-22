@@ -1,4 +1,4 @@
-AVERAGING_ALGO = 1 # 0 = unweighted; 1 = weighted; 2 = use the custom function defined below.
+AVERAGING_ALGO = 0 # 0 = unweighted; 1 = weighted; 2 = use the custom function defined below.
 
 
 
