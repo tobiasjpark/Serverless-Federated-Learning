@@ -1,17 +1,7 @@
 # Serverless Federated Learning
 This is my computer science Master's Project to use federated learning to train machine learning models over edge devices and develop a federated learning framework using the serverless computing model on AWS Lambda/Greengrass.
 
-# Federated Learning
-copy from poster
-
-# The Serverless Model 
-copy from poster
-
-# System Architecture
-copy from poster
-
-# Speed and Convergence Evaluation
-copy from poster
+![](poster.pptx.jpg)
 
 # Documentation/Instructions
 See [the wiki](https://github.com/tobiasjpark/Serverless-Federated-Learning/wiki).
