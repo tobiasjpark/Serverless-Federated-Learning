@@ -109,8 +109,6 @@ class Client:
                     continue
                 dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(version)}}, AttributeUpdates={self.CLIENT_ID + '-' + timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
 
-            
-
             sleepTilNextRound(completed_round)
 
 if __name__ == '__main__':

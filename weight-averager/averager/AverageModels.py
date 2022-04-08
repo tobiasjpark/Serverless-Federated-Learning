@@ -1,10 +1,20 @@
 AVERAGING_ALGO = 0 # 0 = unweighted; 1 = weighted; 2 = use the custom function defined below.
 
+# This file controls which algorithm is used to averager the client 
+# models together. 
+# 
+# Set AVERAGING_ALGO to 0 to use unweighted averaging 
+# where each model is given equal weight and averaged. 
+# 
+# Set it to 1 to perform weighted averaging, where each model is given weight with 
+# proportion to the number of datasets that was used to train it. 
+# 
+# Set it to 2 to perform a custom algorithm, then define that custom 
+# algorithm in the customAlveragingAlgo function which takes as argument 
+# a list of objects that were pickled in CreatePickle.py on the clients 
+# (see client CreatePickle.py documentation) and returns a pyTorch 
+# neural net state dictionary. 
 
-
-# This function is called by the averager to average all the different models into one single model.
-# It takes in a list that contains tuples of type (neural network in dictionary form, # of data points that were used to train).
-# It returns a single pytorch neural net in dictionary form.
 def customAveragingAlgo(model_states):
     new_model_state_dict = model_states[0]['net']  # initiate new_model_state_dict with the correct keys. The values will be overwritten later
     for key in new_model_state_dict: # for each parameter in the neural network

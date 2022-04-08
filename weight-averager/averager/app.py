@@ -9,6 +9,8 @@ from CheckThreshold import checkThreshold
 from UpdateInitiatorTimer import updateInitiatorTimer
 
 # Unweighted averaging: all models are given equal weight.
+# model_states: a list of objects returned by CreatePickle.py in the client code
+# returns a new neural network as a state dictionary that represents the averaged model
 def unweighted(model_states):
     new_model_state_dict = model_states[0]['net'] # initiate new_model_state_dict with the correct keys. The values will be overwritten later
 
@@ -24,6 +26,8 @@ def unweighted(model_states):
     return new_model_state_dict
 
 # Weighted averaging: all models are given weight proportional to number of data points
+# model_states: a list of objects returned by CreatePickle.py in the client code
+# returns a new neural network as a state dictionary that represents the averaged model
 def weighted(model_states):
     new_model_state_dict = model_states[0]['net'] # initiate new_model_state_dict with the correct keys. The values will be overwritten later
     for key in new_model_state_dict: # for each parameter in the neural network
@@ -43,6 +47,7 @@ def weighted(model_states):
     # Return the new model
     return new_model_state_dict
 
+# Factory method design pattern; return the correct averaging algorithm function
 def getAveragingAlgo():
     if AVERAGING_ALGO == 0:
         return unweighted
@@ -53,6 +58,7 @@ def getAveragingAlgo():
 
 # Function to average a list of models together into one model
 # models is a list that contains tuples of type (neural net, # of data points that were used to train)
+# returns the new averaged model
 def averageModels(models):
     # Modified from https://discuss.pytorch.org/t/average-each-weight-of-two-models/77008
     # Create an empty Net
@@ -66,6 +72,7 @@ def averageModels(models):
     new_model.load_state_dict(result_dictionary)
     return new_model
 
+# mutex lock activate
 def lock():
     my_resource_id = 1
     try:
@@ -80,10 +87,12 @@ def lock():
     except:
         return False
 
+# mutex lock deactivate
 def unlock():
     dyn_table = boto3.client('dynamodb')
     dyn_table.delete_item(TableName='mutex-lock-table', Key={'ResourceId': {'N': "1"}})
 
+# main function for AWS Lambda
 def lambda_handler(event, context):
     timestamps = {}
     timestamps["T7"] = time.time()

@@ -1,7 +1,12 @@
-# Neural network model. Modify to suit your needs.
+# Edit this file to describe the pyTorch neural network being used to 
+# train. This should match the Net.py file used by the clients 
+# (see client section above). This file will be treated as the neural 
+# network object throuhout the rest of the code.
+
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
+
 class Net(nn.Module):
     def __init__(self):
         super().__init__()

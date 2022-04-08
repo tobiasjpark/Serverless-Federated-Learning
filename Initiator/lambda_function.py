@@ -4,6 +4,7 @@ import json
 from ChooseClients import chooseClients
 from time import time
 
+# Main function for AWS Lambda
 def lambda_handler(event, context):
     # Make sure there is not currently a round in progress (client assignment and weight buckets should be empty)
     src_bucket = boto3.resource('s3').Bucket("client-assignments")
@@ -37,7 +38,7 @@ def lambda_handler(event, context):
     storage_bucket = boto3.resource('s3').Bucket("global-server-model") # bucket where server stores its global model
     version = list(storage_bucket.objects.all())[0].key
 
-    dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(int(version)+1)}}, AttributeUpdates={'INITIATOR-T0': {'Value': {'N': str(time())}}})
+    initial_time = time()
 
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('clients')
@@ -55,6 +56,11 @@ def lambda_handler(event, context):
     
     for result in results:
         service_client.upload_file('/tmp/placeholder.txt', 'client-assignments', result) 
+
+    final_time = time() - initial_time
+    dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(int(version)+1)}}, AttributeUpdates={'INITIATOR-T0': {'Value': {'N': str(initial_time)}}})
+    dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(int(version)+1)}}, AttributeUpdates={'INITIATOR-TOTAL': {'Value': {'N': str(final_time)}}})
+
 
     return {
         'statusCode': 200,

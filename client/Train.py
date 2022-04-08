@@ -1,13 +1,23 @@
+# Edit the train function to control how the client performs local 
+# training on their model. 
+# 
+# The first 3 lines of this file are constants that set 
+# the learning rate and momentum. 
+# 
+# The function takes the neural net 
+# object to train on, the DataLoader from LoadData.py (see above), 
+# and the number of epochs (number of local rounds per global round) 
+# to train over, respectively. 
+# 
+# It returns the trained neural net object.
+
 lr = 0.0001
 momentum=0.9
-ROUNDS_IN_EPOCH = 8
-
 
 import torch.nn as nn
 import torch 
 import torch.optim as optim
 
-# Function for training for one epoch on a client
 def train(net, trainloader, epoch):
     for rounds in range(0, epoch):
         criterion = nn.CrossEntropyLoss()

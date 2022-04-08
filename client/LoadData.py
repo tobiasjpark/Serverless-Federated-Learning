@@ -1,6 +1,10 @@
 import torch
 
-# This function creates and returns a pytorch dataloader. Modify this code to use your own pytorch dataloader.
+# Edit the loadData function in this file to control how the client's dataset is loaded. 
+# The id of the client is given as an argument. 
+# The function must return a pyTorch DataLoader object that 
+# represents its dataset.
+
 def loadData(id):
     import pickle
     file = open('split_dataset_' + id + '.pkl', 'rb')
