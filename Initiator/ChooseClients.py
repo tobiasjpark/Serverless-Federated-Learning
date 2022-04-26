@@ -1,4 +1,5 @@
 import random
+import boto3
 
 # Edit the chooseClients function in this file to specify a custom 
 # algorithm for how clients should be chosen at the beginning of each 
@@ -10,9 +11,19 @@ import random
 # the names of clients chosen to participate in the next global round.
 
 def chooseClients(clients):
-    percentage = 1 # percentage of clients to randomly choose for a given round, given as a decimal
+    dyn_table = boto3.client('dynamodb')
+    total = 20 
+    rankings = {} 
 
-    random.shuffle(clients)
-    length = len(clients)
-    index = length * percentage
-    return clients[0:index]
+    max_time = -1.0
+
+    for client in clients:
+        client_time = dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(client)}})['Item']['average']['N']
+        if client_time > max_time:
+            max_time = client_time
+        rankings[client] = float(client_time)
+    
+    sorted_rankings = sorted(rankings, key=rankings.get)
+
+    return sorted_rankings[0:20]
+    

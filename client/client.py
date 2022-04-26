@@ -1,3 +1,5 @@
+b = 0.8 # client selection algorithm - exponentially weighted average parameter
+
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
@@ -20,7 +22,7 @@ class Client:
 
         dynamodb = boto3.resource('dynamodb')
         table = dynamodb.Table('clients')
-        table.put_item(Item={'device_id': id})
+        table.put_item(Item={'device_id': id, 'average': '-1'})
 
         self.client_data = loadData(str(id))
 
@@ -102,12 +104,20 @@ class Client:
             t = t.replace(tzinfo=timezone.utc).astimezone(tz=None) # convert from UTC to local time so the timestamps match up for the Upload Time calculation
             timestamps["T6"] = mktime(t.timetuple()) + t.microsecond / 1E6
             timestamps["Upload Time"] = timestamps["T6"] - timestamps["T4"]
+            total = timestamps["T3 Download Time"] + timestamps["T5 Compute Time"] + timestamps["Upload Time"] 
 
             dyn_table = boto3.client('dynamodb')
             for timestamp in timestamps:
                 if timestamp in ("T1", "T2", "T4", "T6"):
                     continue
                 dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(version)}}, AttributeUpdates={self.CLIENT_ID + '-' + timestamp: {'Value': {'N': str(timestamps[timestamp])}}})
+
+            average_exists = dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}})['Item']['average']['N']
+            if average_exists == -1:
+                dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'N': str(total)}}})
+            else:
+                new_avg = b * float(average_exists) + (1-b) * total
+                dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'N': str(new_avg)}}})
 
             sleepTilNextRound(completed_round)
 
