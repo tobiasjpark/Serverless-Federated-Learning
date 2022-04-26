@@ -23,7 +23,13 @@ def chooseClients(clients):
             max_time = client_time
         rankings[client] = client_time
     
-    sorted_rankings = sorted(rankings, key=rankings.get)
+    sorted_rankings = []
 
-    return sorted_rankings[0:20]
+    for client in rankings:
+        c_time = rankings[client] / abs(max_time) 
+        prob = random.random()
+        if prob > c_time:
+            sorted_rankings.append(client)
+
+    return sorted_rankings
     
