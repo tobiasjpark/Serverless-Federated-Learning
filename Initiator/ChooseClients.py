@@ -18,10 +18,10 @@ def chooseClients(clients):
     max_time = -1.0
 
     for client in clients:
-        client_time = dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(client)}})['Item']['average']['N']
+        client_time = float(dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(client)}})['Item']['average']['S'])
         if client_time > max_time:
             max_time = client_time
-        rankings[client] = float(client_time)
+        rankings[client] = client_time
     
     sorted_rankings = sorted(rankings, key=rankings.get)
 
