@@ -113,7 +113,7 @@ class Client:
                 dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(version)}}, AttributeUpdates={self.CLIENT_ID + '-' + timestamp: {'Value': {'S': str(timestamps[timestamp])}}})
 
             average_exists = dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}})['Item']['average']['S']
-            if average_exists == -1:
+            if average_exists == "-1":
                 dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'S': str(total)}}})
             else:
                 new_avg = b * float(average_exists) + (1-b) * total
