@@ -40,6 +40,7 @@ from CreatePickle import createPickle
 from time import time, mktime
 from datetime import timezone
 import socket
+import sys
 
 class Client:
     def __init__(self, id, epoch):
@@ -143,6 +144,6 @@ class Client:
             sleepTilNextRound(completed_round)
 
 if __name__ == '__main__':
-    id = socket.gethostname()
+    id = sys.argv[1]
     
-    Client(id, int(local_per_global))
+    Client(id, int(sys.argv[2]))
