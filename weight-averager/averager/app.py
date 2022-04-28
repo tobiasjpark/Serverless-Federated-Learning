@@ -110,7 +110,7 @@ def lambda_handler(event, context):
     dest_bucket = boto3.resource('s3').Bucket("client-weights") 
     contents = dest_bucket.objects.all() 
     for name in contents:
-        filename = name.key.split('-')[1]
+        filename = name.key.split(';')[1]
         bucket_set.add(filename)
 
     # Check whether enough clients have responded to meet the threshold for continuing
@@ -155,7 +155,7 @@ def lambda_handler(event, context):
         contents = dest_bucket.objects.all() 
         for name in contents:
             filename = name.key
-            if int(filename.split('-')[0]) != version:
+            if int(filename.split(';')[0]) != version:
                 print("Old version detected, discarding")
                 continue # old update for an old round, ignore
             service_client.download_file('client-weights', filename, '/tmp/tmp_model.nn')

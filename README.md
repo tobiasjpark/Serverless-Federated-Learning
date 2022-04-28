@@ -1,8 +1,10 @@
 # Serverless Federated Learning
 This project provides a framework for using federated learning to train machine learning models over edge devices and develop a federated learning framework using the serverless computing model on AWS Lambda/Greengrass. The code is written in Python 3 and uses PyTorch for all machine learning tasks.
 
-
+Poster (click to expand):
 ![](poster.pptx.jpg)
+
+[Poster Addendum on Client Selection Algorithms](addendum.pdf)
 
 # Folder Structure
 ```
@@ -45,15 +47,16 @@ The application uses S3 for storage and DynamoDB to keep track of a database of 
 This is a PyTorch machine learning model which is stored in S3. It represents the most up-to-date model. The global model will be updated in each round of federated learning. To save the PyTorch model to S3, the model object is converted to a dictionary and serialized to a file using pickle. It can then be deserialized with pickle and converted back into a python object. The `create_empty_NN_file.py` script in the utils folder can be used to create an initial file to start off with.
 
 ## Initiator
-The initiator is an AWS Lambda function that initiates the beginning of a single round of training. It can be invoked manually through an API or by a timer at set intervals. When invoked, it kick starts a new round by selecting a subset of clients and notifying them to participate in the new round.
+The initiator is an AWS Lambda function that initiates the beginning of a single round of training. It can be invoked manually through an API or by a timer at set intervals. When invoked, it kick starts a new round by selecting a subset of clients and notifying them to participate in the new round. It can be invoked by an AWS EventBridge timer or any other supported AWS event of your choosing.
 
 ### Configuration Options
-- ChooseClients.py: Edit the chooseClients function in this file to specify a custom algorithm for how clients should be chosen at the beginning of each global round. The function is called at the beginning of each global round; it is given as an argument a list `clients` of the names of all clients who are available for participation and must return a list of the names of clients chosen to participate in the next global round.
+- ChooseClients.py: Edit the chooseClients function in this file to specify a custom algorithm for how clients should be chosen at the beginning of each global round. The function is called at the beginning of each global round; it is given as an argument a list `clients` of the names of all clients who are available for participation and must return a list of the names of clients chosen to participate in the next global round. The default option is to use a client selection algorithm that attempts to pick the fastest clients probabilistically, using exponential weighted averaging to calculate the average turnaround of the clients; the clients time themselves and handle their own averaged value - see the Clients section below. 
 
 ## Clients
 The clients are any number of edge devices running our client code in AWS Greengrass. Each one has a dataset to train with stored locally on the device. Each client checks an S3 bucket periodically to detect the start of a new round. When the Initiator begins a new round, the clients see this and check whether they have been selected to participate. If so, they download the current global model, perform updates/training on it using their local dataset, and upload their resulting models to another S3 bucket. See the Installation/Setup section for instructions on where the client's dataset files should be located on the device.
 
 ### Configuration Options
+- client.py: At the top of this file are some configuration parameters for the client device. The variable `b` is used for the client selection algorithm (see poster addendum) and is used to tune the exponential weighted averaging parameter. The exponential weighted averaging of the turnaround time for each client is performed by the client in the updateTurnaround() function at the top of the file. The variable `local_per_global` specifies how many local training rounds should be performed per each global round (see poster). The environment variable `AWS_DEFAULT_REGION` should be set to whichever AWS region you wish the client to use; this should be the same region that the Lambda functions are located in. If running the client on Greengrass, or if your host environment does not have your AWS credentials set, you may also need to set the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to allow the device to access the necessary components in AWS.
 - CreatePickle.py: Edit the createPickle function in this file to  prepare the pyTorch neural network to be pickled as a file. It is given an argument my_net (the pyTorch network object) and a reference to the pyTorch DataLoader object created in LoadData.py (see below). The DataLoader object is included in case the user wants to use data like the number of points in the dataset and include that information in the pickled object to be used later by the weight averager for a custom averaging algorithm. Whatever object is returned by the createPickle function is the object that is serialized and pickled.
 - LoadData.py: Edit the loadData function in this file to control how the client's dataset is loaded. The id of the client is given as an argument. The function must return a pyTorch DataLoader object that represents its dataset.
 - Net.py: Edit this file to describe the pyTorch neural network being used to train. This should match the Net.py file used by the Averager (see Averager section below). This file will be treated as the neural network object throuhout the rest of the code.
@@ -80,7 +83,8 @@ The averager is an AWS Lambda function. After a certain number of time has passe
       - Go into the initiator folder and package all of its contents into a ZIP file
       - In the AWS Management Console, create an AWS Lambda function named "initiator" and upload the ZIP file you created as the code
       - The Lambda Function must have an Execution Role that has the Permission Policies AmazonS3FullAccess, AmazonDynamoDBFullAccess, and AWSLambda_FullAccess 
-      - Go to AWS Eventbridge and create a rule called "invoke-initiator". Under "Define Pattern", choose "Schedule" and enter a time interval. Under "Select Targets", select "Lambda Function" and choose the initiator function. Disable the rule for now.
+      - To set up a timer to invoke the Initiator and start global rounds at set time intervals: Go to AWS Eventbridge and create a rule called "invoke-initiator". Under "Define Pattern", choose "Schedule" and enter a time interval. Under "Select Targets", select "Lambda Function" and choose the initiator function. 
+        - Or, if you are planning to use a different invocation method to kick off global rounds, set that up instead.
     - Averager
       - The averager needs the PyTorch library in order to average the PyTorch models together. Because the PyTorch library is very large, the averager cannot be uploaded to AWS Lambda normally. Instead, we must use the following method as described here: https://aws.amazon.com/blogs/machine-learning/using-container-images-to-run-pytorch-models-in-aws-lambda/ . This essentially packages the function and its pytorch dependencies into a Docker file and uploads it to an Amazon ECR repository where it can be used as code for a Lambda function. This is summarized in the following steps:
         - Prerequisites:
@@ -105,25 +109,17 @@ The averager is an AWS Lambda function. After a certain number of time has passe
 4. Set up DynamoDB
     - Create a table named "clients" with primary partition key "device_id" (String). This is used to keep track of all registered clients.
     - Create a table named "mutex-locked-clients" with primary partition key "ResourceId" (Number). This is used to implement mutex locking.
+    - Create a table named "timestamps" with primary partition key "Version" (Number) and with Capacity set to "On-Demand" (the default capacity option may not be high enough to handle the load on this table, depending on the number of clients you have running at once). This is used for the logging of timestamps to measure system performance of each client and lambda function during each global round. This data could also be used to create a customized client selection algorithm based on client performance measurements. 
 5. Set up clients
     - Note: The client code uses the hostname of the client device as its unique ID for the serverless federated learning system. For this reason, make sure that each client has a different hostname. Additionally, the semicolon character `;` should not be present in any hostname as this is a special character.
-    - Make sure a relatively up-to-date version of Python 3 is installed on the client device.
-    - Follow steps 1-3 to set up Greengrass V2 on each of your client devices: https://docs.aws.amazon.com/greengrass/v2/developerguide/getting-started.html#install-greengrass-v2
-    - Greengrass V2 runs the client code in a separate Linux user account. To ensure that the client code has access to certain python libraries, they must be installed as root. 
-    - Go to the client folder and run the following command to deploy the client code to your client device:
+    - Make sure a relatively up-to-date version of Python 3 is installed on the client device. To install the necessary python libraries, run `pip3 install torch boto3 torchvision` in a terminal.
+    - If running the client on Greengrass, or if your host environment does not have your AWS credentials set, you may also need to set the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in the `client.py` file - see the Client Configuration Options under the Architecture section of this guide above.
+    - If you'd like, you can run the client code directly on the bare metal device by simply running `python3 client.py` from the `client` directory.
+    - If you wish to run the client in AWS Greengrass, the python files in the `client` directory can simply be packaged as Greengrass V2 artifacts. See the Greengrass V2 documentation for instructions on installing Greengrass on your device and deploying the client code in Greengrass: https://docs.aws.amazon.com/greengrass/v2/developerguide/getting-started.html#install-greengrass-v2
+      - Greengrass V2 runs the client code in a separate Linux user account. To ensure that the client code has access to certain python libraries, they must be installed as root. 
+      - Greengrass unfortunately is rather picky in regards to allowing the client code to access the local filesystem. The client dataset files must be placed in `/greengrass/v2/packages/artifacts-unarchived/com.federated.client/`.
+      - Greengrass also needs access to your AWS login information so that it can upload/download the models from S3, so you must set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables; see the Client Configuration Options under the Architecture section of this guide above.
+      - We did not test this project on Greengrass V1 as it is not the latest supported version, but theoretically it should work in that environment as well with some simple modifications.
 
-      ```
-      sudo /greengrass/v2/bin/greengrass-cli deployment create \
-      --recipeDir ~/greengrasstest/recipes \
-      --artifactDir ~/greengrasstest/artifacts \
-      --merge "com.federated.client=1.0.0"
-      ```
-
-    - If you desire, follow steps 5 and 6 in the above guide to create your component in the AWS IoT Greengrass service and more easily deploy it to multiple client devices with Greengrass V2 installed.
-
-    - Greengrass unfortunately is rather picky in regards to allowing the client code to access the local filesystem. The client dataset files must be placed in `/greengrass/v2/packages/artifacts-unarchived/com.federated.client/`.
-
-    - Greengrass also needs access to your AWS login information so that it can upload/download the models from S3. To do this...
-
-
-Special thanks to my advisor Dr. Stacy Patterson, and to Timothy Castiglia for help with PyTorch.
+# Acknowledgments
+This was created as a Master's Project for Tobias J. Park. Special thanks to my advisor Dr. Stacy Patterson, and to Timothy Castiglia for help with PyTorch.

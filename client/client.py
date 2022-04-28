@@ -1,4 +1,31 @@
+import os
+
+# CONFIGURATION OPTIONS 
+# ==============================
+
 b = 0.8 # client selection algorithm - exponentially weighted average parameter
+local_per_global = 8 # number of local rounds to perform per global round
+os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
+# os.environ['AWS_ACCESS_KEY_ID'] = ''
+# os.environ['AWS_SECRET_ACCESS_KEY'] = ''
+
+def updateTurnaround(total):
+    # update this client's turnaround time using exponential weighted averaging for the client selection algorithm.
+    # this block of code, and the `b` variable at the top of this file, can be removed if you do not wish to 
+    # use an exponential weighted averaging client selection algorithm.
+    # total = the total turnaround time of the last completed round.
+    
+    dyn_table = boto3.client('dynamodb')
+    average_exists = dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}})['Item']['average']['S']
+    if average_exists == "-1":
+        dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'S': str(total)}}})
+    else:
+        new_avg = b * float(average_exists) + (1-b) * total
+        dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'S': str(new_avg)}}})
+    # end of client selection algorithm exponential weighted averaging update code
+
+# ================================
+# END OF CONFIGURATION OPTIONS
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -10,13 +37,13 @@ from Train import train
 from LoadData import loadData
 from SleepTilNextRound import sleepTilNextRound
 from CreatePickle import createPickle
-import sys, os
 from time import time, mktime
 from datetime import timezone
+import socket
 
 class Client:
     def __init__(self, id, epoch):
-        os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
+        
         self.CLIENT_ID = id
         self.service_client = boto3.client('s3')
 
@@ -89,7 +116,7 @@ class Client:
             # Upload to server
             my_net_dict = createPickle(my_net, self.client_data)
             pickle.dump(my_net_dict, open(self.CLIENT_ID + 'tmp_net.nn', 'wb'))
-            upload_filename = str(str(version) + "-" + str(self.CLIENT_ID))
+            upload_filename = str(str(version) + ";" + str(self.CLIENT_ID)) 
             self.service_client.upload_file(self.CLIENT_ID + 'tmp_net.nn', 'client-weights', upload_filename)
 
             version_file = open(self.CLIENT_ID + 'version.txt', 'w')
@@ -112,16 +139,10 @@ class Client:
                     continue
                 dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(version)}}, AttributeUpdates={self.CLIENT_ID + '-' + timestamp: {'Value': {'S': str(timestamps[timestamp])}}})
 
-            average_exists = dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}})['Item']['average']['S']
-            if average_exists == "-1":
-                dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'S': str(total)}}})
-            else:
-                new_avg = b * float(average_exists) + (1-b) * total
-                dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'S': str(new_avg)}}})
-
+            updateTurnaround(total)
             sleepTilNextRound(completed_round)
 
 if __name__ == '__main__':
-    id = sys.argv[1]
-    epoch = sys.argv[2]
-    Client(id, int(epoch))
+    id = socket.gethostname()
+    
+    Client(id, int(local_per_global))

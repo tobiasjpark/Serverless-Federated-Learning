@@ -1,6 +1,0 @@
-{
-    "datatype": 0,
-    "dataset_comand": "torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)",
-    "dataloader_command": "torch.utils.data.DataLoader(subset, batch_size=batch_size, shuffle=True, num_workers=2)",
-    "subset_file": "split_dataset_0.pkl"
-}
