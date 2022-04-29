@@ -9,19 +9,19 @@ os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 # os.environ['AWS_ACCESS_KEY_ID'] = ''
 # os.environ['AWS_SECRET_ACCESS_KEY'] = ''
 
-def updateTurnaround(total):
+def updateTurnaround(total, id):
     # update this client's turnaround time using exponential weighted averaging for the client selection algorithm.
     # this block of code, and the `b` variable at the top of this file, can be removed if you do not wish to 
     # use an exponential weighted averaging client selection algorithm.
     # total = the total turnaround time of the last completed round.
     
     dyn_table = boto3.client('dynamodb')
-    average_exists = dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}})['Item']['average']['S']
+    average_exists = dyn_table.get_item(TableName='clients', Key={'device_id': {'S': str(id)}})['Item']['average']['S']
     if average_exists == "-1":
-        dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'S': str(total)}}})
+        dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(id)}}, AttributeUpdates={"average": {'Value': {'S': str(total)}}})
     else:
         new_avg = b * float(average_exists) + (1-b) * total
-        dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(self.CLIENT_ID)}}, AttributeUpdates={"average": {'Value': {'S': str(new_avg)}}})
+        dyn_table.update_item(TableName='clients', Key={'device_id': {'S': str(id)}}, AttributeUpdates={"average": {'Value': {'S': str(new_avg)}}})
     # end of client selection algorithm exponential weighted averaging update code
 
 # ================================
@@ -139,7 +139,7 @@ class Client:
                     continue
                 dyn_table.update_item(TableName='timestamps', Key={'Version': {'N': str(version)}}, AttributeUpdates={self.CLIENT_ID + '-' + timestamp: {'Value': {'S': str(timestamps[timestamp])}}})
 
-            updateTurnaround(total)
+            updateTurnaround(total, self.CLIENT_ID)
             sleepTilNextRound(completed_round)
 
 if __name__ == '__main__':
