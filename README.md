@@ -122,4 +122,4 @@ The averager is an AWS Lambda function. After a certain number of time has passe
       - We did not test this project on Greengrass V1 as it is not the latest supported version, but theoretically it should work in that environment as well with some simple modifications.
 
 # Acknowledgments
-This was created as a Master's Project for Tobias J. Park. Special thanks to my advisor Dr. Stacy Patterson, and to Timothy Castiglia for help with PyTorch.
+This was created as a Master's Project for [Tobias J. Park](https://github.com/tobiasjpark). Special thanks to my advisor Dr. Stacy Patterson, and to Timothy Castiglia for help with PyTorch.
